@@ -12,7 +12,7 @@ set(CMAKE_DEBUG_POSTFIX "_d")
 set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/bin")
 
 #Find all the required dependencies
-find_package(Boost REQUIRED system thread)
+#find_package(Boost REQUIRED system thread)
 
 set(DEFAULT_SRC_DIR ${CMAKE_SOURCE_DIR}/src)
 set(DEFAULT_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/includes)
@@ -24,7 +24,8 @@ include_directories(
     ${DEFAULT_INCLUDE_DIR}
 )
 
-add_definitions("-std=c++11")
+add_definitions(-std=c++11)
+#add_definitions(-D_USE_BOOST)
 
 link_directories(${DEFAULT_LINK_DIR})
 add_subdirectory(src)

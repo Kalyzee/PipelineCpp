@@ -1,12 +1,19 @@
-#ifndef PIPELINECPP_H
+ #ifndef PIPELINECPP_H
 #define PIPELINECPP_H
 
 #include <vector>
 #include <queue>
-#include <boost/thread/thread.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/bind.hpp>
+#ifdef _USE_BOOST
+    #include <boost/thread/thread.hpp>
+    #include <boost/thread/mutex.hpp>
+    #define THREADLIB boost
+#else
+    #include <thread>
+    #include <mutex>
+    #define THREADLIB std
+#endif /* _USE_BOOST */
 #include <exception>
+#include <typeinfo>
 
 namespace PipelineCpp
 {
@@ -29,6 +36,7 @@ class PipelineException: public std::exception
 
 typedef unsigned int PToken;
 typedef unsigned int QToken;
+typedef unsigned int Qid;
 
 class ProcessingWorker;
 
@@ -62,12 +70,14 @@ class Queue{
         _notEmpty.unlock();
     }
 
+    virtual std::string type() = 0;
+    
     protected:
 
-    boost::mutex _accessmutex;
+    THREADLIB::mutex _accessmutex;
     unsigned int _maxSize;
-    boost::mutex _notEmpty;
-    boost::mutex _spaceLeft;
+    THREADLIB::mutex _notEmpty;
+    THREADLIB::mutex _spaceLeft;
     bool _notEmpty_locked;
     bool _spaceLeft_locked;
 
@@ -81,6 +91,8 @@ class ConcreteQueue: public Queue{
     
     ConcreteQueue(unsigned int maxSize = 1): Queue(maxSize){}
     ~ConcreteQueue(){}
+    
+    virtual std::string type(){ return typeid(T).name(); }
     
     /* Standard push method */
     void push(T resource)
@@ -225,12 +237,40 @@ class ConcreteQueue: public Queue{
 class ProcessingUnit{
 
     public:
-    ProcessingUnit(){}
+    ProcessingUnit(std::string name):_name(name){}
     virtual ~ProcessingUnit(){}
 
     virtual void execute() = 0;
+    
+    bool checkInputs(){ return (_inputTypes.size() == _inputQueues.size()); }
+    
+    bool checkOutputs(){ return (_outputTypes.size() == _outputQueues.size()); }
 
     bool tryLockQueues();
+    
+    std::string name(){ return _name; }
+    
+    template<typename Tin>
+    void addInType(){ _inputTypes.push_back(typeid(Tin).name()); }
+
+    template<typename Tout>
+    void addOutType(){ _outputTypes.push_back(typeid(Tout).name()); }
+    
+    std::string inType(Qid in)
+    {
+        if(in<_inputTypes.size())
+            return _inputTypes[in];
+        else
+            throw PipelineException("Input queue id out of bounds.");
+    }
+    
+    std::string outType(Qid out)
+    {
+        if(out<_outputTypes.size())
+            return _outputTypes[out];
+        else
+            throw PipelineException("Output queue id out of bounds.");
+    }
 
     template<typename Tin>
     void inQueue(Queue* q){
@@ -239,7 +279,7 @@ class ProcessingUnit{
         if(cq!=0)
             _inputQueues.push_back(q);
         else
-            std::cout << "Error: Base Queue object cannot be downcast to this concrete queue type." << std::endl;
+            throw PipelineException("Base Queue object cannot be downcast to this concrete queue type.");
 
     }
 
@@ -250,7 +290,7 @@ class ProcessingUnit{
         if(cq!=0)
             _outputQueues.push_back(q);
 	    else
-            std::cout << "Error: Base Queue object cannot be downcast to this concrete queue type." << std::endl;
+            throw PipelineException("Base Queue object cannot be downcast to this concrete queue type.");
 
     }
 
@@ -284,9 +324,12 @@ class ProcessingUnit{
 
     protected:
 
+    std::string _name;
     std::vector<Queue*> _inputQueues;
+    std::vector<std::string> _inputTypes;
     std::vector<Queue*> _outputQueues;
-    boost::mutex _workingmutex;
+    std::vector<std::string> _outputTypes;
+    THREADLIB::mutex _workingmutex;
 
 };
 
@@ -301,14 +344,14 @@ class ProcessingWorker{
 
     void processUnits();
 
-    void start(){_thread = new boost::thread(&ProcessingWorker::processUnits, this);}
+    void start(){_thread = new THREADLIB::thread(&ProcessingWorker::processUnits, this);}
     void join(){_stop = true; _thread->join();}
 
     protected:
 
     std::vector<ProcessingUnit*>& _processingUnits;
     bool _stop;
-    boost::thread* _thread;
+    THREADLIB::thread* _thread;
     unsigned int _id;
 
 };
@@ -330,7 +373,7 @@ class Pipeline{
         
         ProcessingUnit* pu = dynamic_cast<ProcessingUnit*>(p);
         if(pu==0)
-	    throw PipelineException("Invalid processing unit (not derived from ProcessingUnit class).");
+	        throw PipelineException("Invalid processing unit (not derived from ProcessingUnit class).");
 	
         _processingUnits.push_back(pu);
 
@@ -346,10 +389,13 @@ class Pipeline{
     }
 
     template<typename T>
-    void plug(PToken tk1, PToken tk2)
+    void plug(PToken tk1, Qid out, PToken tk2, Qid in)
     {
 
-        ConcreteQueue<T> * cqueue = new ConcreteQueue<T>();
+        ConcreteQueue<T> * cqueue;
+        if(_processingUnits[tk1]->outType(out) == _processingUnits[tk2]->inType(in) && _processingUnits[tk1]->outType(out) == typeid(T).name())
+            cqueue = new ConcreteQueue<T>();
+        else throw PipelineException("Non matching queue types.");
 	
         _queues.push_back(cqueue);
 
@@ -360,14 +406,22 @@ class Pipeline{
 
     void plugInput(PToken tk)
     {
-        _processingUnits[tk]->inQueue<Tin>(_inputQueue);
+        if(_processingUnits[tk]->outType(0) == typeid(Tin).name())
+            _processingUnits[tk]->inQueue<Tin>(_inputQueue);
+        else throw PipelineException("Non matching queue types.");
     }
 
+    std::string inputType(){ return typeid(Tin).name(); }
+    
     void plugOutput(PToken tk)
     {
-        _processingUnits[tk]->outQueue<Tout>(_outputQueue);
+        if(_processingUnits[tk]->inType(0) == typeid(Tout).name())
+            _processingUnits[tk]->outQueue<Tout>(_outputQueue);
+        else throw PipelineException("Non matching queue types.");
     }
 
+    std::string outputType(){ return typeid(Tout).name(); }
+    
     void push(Tin resource)
     {
         _inputQueue->push(resource);
@@ -384,21 +438,23 @@ class Pipeline{
         Tout result;
         push(resource);
 
-	for(int i=0; i<_nbWorkers; i++)
-	    _workers.push_back(ProcessingWorker(_processingUnits, (unsigned int) i));
+        for(int i=0; i<_nbWorkers; i++)
+	        _workers.push_back(ProcessingWorker(_processingUnits, (unsigned int) i));
 
-	for(int i=0; i<_nbWorkers; i++)
-	    _workers[i].start();
+        for(int i=0; i<_nbWorkers; i++)
+            _workers[i].start();
 
-        result = pop();
+		result = pop();
 
-	for(int i=0; i<_nbWorkers; i++)
-	    _workers[i].join();
+	    for(int i=0; i<_nbWorkers; i++)
+	        _workers[i].join();
 	
-	return result;
+	    return result;
 
     }
 
+    void check();
+    
     protected:
 
     unsigned int _nbWorkers;
@@ -411,5 +467,9 @@ class Pipeline{
 };
 
 }
+
+
+#undef THREADLIB
+
 
 #endif	/* PIPELINECPP_H */

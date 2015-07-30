@@ -1,23 +1,24 @@
 #include <PipelineCpp.h>
 
 using namespace PipelineCpp;
+using namespace std;
 
 void ProcessingWorker::processUnits()
 {
     
     while(!_stop)
     {
-      for(int i=0; i<_processingUnits.size(); i++)
-	{   
-	    if(_processingUnits[i]->try_lock())
-	    {
-	        if(_processingUnits[i]->tryLockQueues())
-		{
+        for(int i=0; i<_processingUnits.size(); i++)
+	    {   
+	        if(_processingUnits[i]->try_lock())
+	        {
+	            if(_processingUnits[i]->tryLockQueues())
+		        {
 	            _processingUnits[i]->execute();
-		}
-		_processingUnits[i]->unlock();
-	    } 
-	}
+		        }
+		        _processingUnits[i]->unlock();
+	        } 
+	    }
     }
 
 }
@@ -66,4 +67,20 @@ bool ProcessingUnit::tryLockQueues()
 
     }
 
+}
+
+template<typename Tin, typename Tout>
+void Pipeline<Tin,Tout>::check()
+{
+    
+    for(int i=0; i<_processingUnits.size(); i++)
+    {
+        
+        if(!_processingUnits[i]->checkInputs())
+            throw PipelineException(string(string("Invalid number of inputs on '")+_processingUnits[i]->name()+string("' Processing Unit.")).c_str());
+        if(!_processingUnits[i]->checkOutputs())
+            throw PipelineException(string(string("Invalid number of outputs on '")+_processingUnits[i]->name()+string("' Processing Unit.")).c_str());
+        
+    }
+    
 }
