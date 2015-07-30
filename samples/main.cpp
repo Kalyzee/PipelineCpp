@@ -19,7 +19,7 @@ class DummyDerived: public DummyBase{
 
 };
 
-class Addition: public PipelineCpp::ConcreteProcessingUnit{
+class Addition: public PipelineCpp::ProcessingUnit{
 
     public:
     Addition(){}
@@ -27,18 +27,18 @@ class Addition: public PipelineCpp::ConcreteProcessingUnit{
 
     virtual void execute(){
 
-      std::cout << "Addition" << std::endl;
+        std::cout << "Addition" << std::endl;
 
-      float op0 = popIn<float>(0);
-      float op1 = popIn<float>(1);
+        float op0 = popIn<float>(0);
+        float op1 = popIn<float>(1);
 
-      pushOut<float>(0, op0+op1);
+        pushOut<float>(0, op0+op1);
 
     }
 
 };
 
-class Subtraction: public PipelineCpp::ConcreteProcessingUnit{
+class Subtraction: public PipelineCpp::ProcessingUnit{
 
     public:
     Subtraction(){}
@@ -57,7 +57,7 @@ class Subtraction: public PipelineCpp::ConcreteProcessingUnit{
 
 };
 
-class Mutliplication: public PipelineCpp::ConcreteProcessingUnit{
+class Mutliplication: public PipelineCpp::ProcessingUnit{
 
     public:
     Mutliplication(){}
@@ -76,7 +76,7 @@ class Mutliplication: public PipelineCpp::ConcreteProcessingUnit{
 
 };
 
-class Division: public PipelineCpp::ConcreteProcessingUnit{
+class Division: public PipelineCpp::ProcessingUnit{
 
     public:
     Division(){}
@@ -95,7 +95,7 @@ class Division: public PipelineCpp::ConcreteProcessingUnit{
 
 };
 
-class Duplication: public PipelineCpp::ConcreteProcessingUnit{
+class Duplication: public PipelineCpp::ProcessingUnit{
 
     public:
     Duplication(){}

@@ -290,16 +290,6 @@ class ProcessingUnit{
 
 };
 
-class ConcreteProcessingUnit: public ProcessingUnit{
-
-    public:
-    ConcreteProcessingUnit(){}
-    ~ConcreteProcessingUnit(){}
-
-    virtual void execute() = 0;
-
-};
-
 class ProcessingWorker{
 
     public:
@@ -336,9 +326,9 @@ class Pipeline{
     ~Pipeline(){}
 
     template<typename PType>
-    PToken create(){
+    PToken insert(PType* p){
         
-        ProcessingUnit* pu = dynamic_cast<ProcessingUnit*>(new PType());
+        ProcessingUnit* pu = dynamic_cast<ProcessingUnit*>(p);
         if(pu==0)
 	    throw PipelineException("Invalid processing unit (not derived from ProcessingUnit class).");
 	
@@ -346,6 +336,13 @@ class Pipeline{
 
         return _processingUnits.size()-1;
 
+    }
+
+    template<typename PType>
+    PToken create(){
+        
+        return insert<PType>(new PType());
+        
     }
 
     template<typename T>
