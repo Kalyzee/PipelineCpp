@@ -197,6 +197,7 @@ int main(int argc, char* argv[])
     std::cout << "pipeline_built" << std::endl;
 
     std::cout << pipeline.feed(10) << std::endl;
+    std::cout << pipeline.feed(100) << std::endl;
 
     return 0;
 

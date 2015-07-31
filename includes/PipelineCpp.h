@@ -3,15 +3,8 @@
 
 #include <vector>
 #include <queue>
-#ifdef _USE_BOOST
-    #include <boost/thread/thread.hpp>
-    #include <boost/thread/mutex.hpp>
-    #define THREADLIB boost
-#else
-    #include <thread>
-    #include <mutex>
-    #define THREADLIB std
-#endif /* _USE_BOOST */
+#include <thread>
+#include <mutex>
 #include <exception>
 #include <typeinfo>
 
@@ -74,10 +67,10 @@ class Queue{
     
     protected:
 
-    THREADLIB::mutex _accessmutex;
+    std::mutex _accessmutex;
     unsigned int _maxSize;
-    THREADLIB::mutex _notEmpty;
-    THREADLIB::mutex _spaceLeft;
+    std::mutex _notEmpty;
+    std::mutex _spaceLeft;
     bool _notEmpty_locked;
     bool _spaceLeft_locked;
 
@@ -329,7 +322,7 @@ class ProcessingUnit{
     std::vector<std::string> _inputTypes;
     std::vector<Queue*> _outputQueues;
     std::vector<std::string> _outputTypes;
-    THREADLIB::mutex _workingmutex;
+    std::mutex _workingmutex;
 
 };
 
@@ -344,14 +337,14 @@ class ProcessingWorker{
 
     void processUnits();
 
-    void start(){_thread = new THREADLIB::thread(&ProcessingWorker::processUnits, this);}
+    void start(){_stop = false; _thread = new std::thread(&ProcessingWorker::processUnits, this);}
     void join(){_stop = true; _thread->join();}
 
     protected:
 
     std::vector<ProcessingUnit*>& _processingUnits;
     bool _stop;
-    THREADLIB::thread* _thread;
+    std::thread* _thread;
     unsigned int _id;
 
 };
@@ -365,6 +358,10 @@ class Pipeline{
     {
         _inputQueue = new ConcreteQueue<Tin>();
 	_outputQueue = new ConcreteQueue<Tout>();
+
+	for(int i=0; i<_nbWorkers; i++)
+	    _workers.push_back(ProcessingWorker(_processingUnits, (unsigned int) i));
+
     }
     ~Pipeline(){}
 
@@ -439,17 +436,14 @@ class Pipeline{
         push(resource);
 
         for(int i=0; i<_nbWorkers; i++)
-	        _workers.push_back(ProcessingWorker(_processingUnits, (unsigned int) i));
-
-        for(int i=0; i<_nbWorkers; i++)
             _workers[i].start();
 
-		result = pop();
+        result = pop();
 
-	    for(int i=0; i<_nbWorkers; i++)
-	        _workers[i].join();
+        for(int i=0; i<_nbWorkers; i++)
+	    _workers[i].join();
 	
-	    return result;
+        return result;
 
     }
 
@@ -467,9 +461,5 @@ class Pipeline{
 };
 
 }
-
-
-#undef THREADLIB
-
 
 #endif	/* PIPELINECPP_H */
