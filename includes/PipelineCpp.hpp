@@ -1,5 +1,5 @@
- #ifndef PIPELINECPP_H
-#define PIPELINECPP_H
+#ifndef PIPELINECPP_HPP
+#define PIPELINECPP_HPP
 
 #include <vector>
 #include <queue>
@@ -388,7 +388,7 @@ class Pipeline{
     template<typename T>
     void plug(PToken tk1, Qid out, PToken tk2, Qid in)
     {
-
+		
         ConcreteQueue<T> * cqueue;
         if(_processingUnits[tk1]->outType(out) == _processingUnits[tk2]->inType(in) && _processingUnits[tk1]->outType(out) == typeid(T).name())
             cqueue = new ConcreteQueue<T>();
@@ -462,4 +462,4 @@ class Pipeline{
 
 }
 
-#endif	/* PIPELINECPP_H */
+#endif	/* PIPELINECPP_HPP */

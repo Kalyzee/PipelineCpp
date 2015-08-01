@@ -1,4 +1,4 @@
-#include <PipelineCpp.h>
+#include <PipelineCpp.hpp>
 
 using namespace PipelineCpp;
 using namespace std;

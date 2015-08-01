@@ -1,5 +1,5 @@
 #include <iostream>
-#include <PipelineCpp.h>
+#include <PipelineCpp.hpp>
 
 class DummyBase{
 
@@ -195,7 +195,7 @@ int main(int argc, char* argv[])
     }catch(PipelineCpp::PipelineException e){std::cout << e.what() << std::endl;}
 
     std::cout << "pipeline_built" << std::endl;
-
+	
     std::cout << pipeline.feed(10) << std::endl;
     std::cout << pipeline.feed(100) << std::endl;
 
