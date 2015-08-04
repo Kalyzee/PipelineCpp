@@ -1,7 +1,6 @@
 #ifndef PIPELINECPP_HPP
 #define PIPELINECPP_HPP
 
-#include <iostream>
 #include <vector>
 #include <queue>
 #include <thread>
@@ -404,7 +403,7 @@ class Pipeline{
 
     }
 
-    void plugInput(PToken tk, Qid in)
+  void plugInput(PToken tk, Qid in = 0)
     {
         if(_processingUnits[tk]->outType(0) == typeid(Tin).name())
 	{
@@ -415,10 +414,10 @@ class Pipeline{
 
     std::string inputType(){ return typeid(Tin).name(); }
     
-    void plugOutput(PToken tk)
+    void plugOutput(PToken tk, Qid out = 0)
     {
         if(_processingUnits[tk]->inType(0) == typeid(Tout).name())
-	    _processingUnits[tk]->outQueue<Tout>(_outputQueue, 0);
+	    _processingUnits[tk]->outQueue<Tout>(_outputQueue, out);
         else throw PipelineException("Non matching queue types.");
     }
 
@@ -428,7 +427,6 @@ class Pipeline{
     {
         for(int i=0; i<_inputQueues.size(); i++)
             _inputQueues[i]->push(resource);
-	std::cout << "pushed" << std::endl;
 	_inCount++;
     }
 
