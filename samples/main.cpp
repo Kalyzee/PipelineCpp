@@ -158,40 +158,30 @@ int main(int argc, char* argv[])
       //PipelineCpp::PToken pu_add = pipeline.create<Addition>();
         std::cout << "pu_sub" << std::endl;
         PipelineCpp::PToken pu_sub = pipeline.create<Subtraction>();
+
         std::cout << "pu_mul" << std::endl;
         PipelineCpp::PToken pu_mul = pipeline.create<Mutliplication>();
+
         std::cout << "pu_div" << std::endl;
         PipelineCpp::PToken pu_div = pipeline.create<Division>();
-        std::cout << "pu_dup1" << std::endl;
-        PipelineCpp::PToken pu_dup1 = pipeline.create<Duplication>();
-        std::cout << "pu_dup2" << std::endl;
-        PipelineCpp::PToken pu_dup2 = pipeline.create<Duplication>();
-        std::cout << "pu_dup3" << std::endl;
-        PipelineCpp::PToken pu_dup3 = pipeline.create<Duplication>();
-        
-        std::cout << "plug1" << std::endl;
-        pipeline.plugInput(pu_dup1);
-        std::cout << "plug2" << std::endl;
-        pipeline.plug<float>(pu_dup1, 0, pu_dup2, 0);
-        std::cout << "plug3" << std::endl;
-        pipeline.plug<float>(pu_dup1, 1, pu_dup3, 0);
-        
-        std::cout << "plug4" << std::endl;
-        pipeline.plug<float>(pu_dup2, 0, pu_mul, 0);
-        std::cout << "plug5" << std::endl;
-        pipeline.plug<float>(pu_dup2, 0, pu_mul, 1);
 
-        std::cout << "plug6" << std::endl;
-        pipeline.plug<float>(pu_dup3, 0, pu_div, 0);
-        std::cout << "plug7" << std::endl;
-        pipeline.plug<float>(pu_dup3, 1, pu_div, 1);
+        //std::cout << "pu_dup1" << std::endl;
+        //PipelineCpp::PToken pu_dup1 = pipeline.create<Duplication>();
 
-        std::cout << "plug8" << std::endl;
+        //std::cout << "pu_dup2" << std::endl;
+        //PipelineCpp::PToken pu_dup2 = pipeline.create<Duplication>();
+
+        //std::cout << "pu_dup3" << std::endl;
+        //PipelineCpp::PToken pu_dup3 = pipeline.create<Duplication>();
+        
+	pipeline.plugInput(pu_mul, 0);	
+        pipeline.plugInput(pu_mul, 1);
+        pipeline.plugInput(pu_div, 0);
+        pipeline.plugInput(pu_div, 1);
         pipeline.plug<float>(pu_mul, 0, pu_sub, 0);
-        std::cout << "plug9" << std::endl;
         pipeline.plug<float>(pu_div, 0, pu_sub, 1);
-        std::cout << "plug10" << std::endl;
         pipeline.plugOutput(pu_sub);
+
     }catch(PipelineCpp::PipelineException e){std::cout << e.what() << std::endl;}
 
     std::cout << "pipeline_built" << std::endl;

@@ -1,6 +1,7 @@
 #ifndef PIPELINECPP_HPP
 #define PIPELINECPP_HPP
 
+#include <iostream>
 #include <vector>
 #include <queue>
 #include <thread>
@@ -235,19 +236,19 @@ class ProcessingUnit{
 
     virtual void execute() = 0;
     
-    bool checkInputs(){ return (_inputTypes.size() == _inputQueues.size()); }
+    bool checkInputs();
     
-    bool checkOutputs(){ return (_outputTypes.size() == _outputQueues.size()); }
+    bool checkOutputs();
 
     bool tryLockQueues();
     
     std::string name(){ return _name; }
     
     template<typename Tin>
-    void addInType(){ _inputTypes.push_back(typeid(Tin).name()); }
+    void addInType(){ _inputTypes.push_back(typeid(Tin).name()); _inputQueues.push_back(NULL);}
 
     template<typename Tout>
-    void addOutType(){ _outputTypes.push_back(typeid(Tout).name()); }
+    void addOutType(){ _outputTypes.push_back(typeid(Tout).name()); _outputQueues.push_back(std::vector<Queue*>());}
     
     std::string inType(Qid in)
     {
@@ -266,23 +267,23 @@ class ProcessingUnit{
     }
 
     template<typename Tin>
-    void inQueue(Queue* q){
+    void inQueue(Queue* q, Qid in){
 
         ConcreteQueue<Tin>* cq = dynamic_cast< ConcreteQueue<Tin>* >(q);
         if(cq!=0)
-            _inputQueues.push_back(q);
+            _inputQueues[in] = q;
         else
             throw PipelineException("Base Queue object cannot be downcast to this concrete queue type.");
 
     }
 
     template<typename Tout>
-    void outQueue(Queue* q){
+    void outQueue(Queue* q, Qid out){
 
         ConcreteQueue<Tout>* cq = dynamic_cast< ConcreteQueue<Tout>* >(q);
         if(cq!=0)
-            _outputQueues.push_back(q);
-	    else
+	    _outputQueues[out].push_back(q);
+	else
             throw PipelineException("Base Queue object cannot be downcast to this concrete queue type.");
 
     }
@@ -298,8 +299,9 @@ class ProcessingUnit{
     template<typename Tout>
     void pushOut(QToken qk, Tout resource){
 
-        static_cast<PipelineCpp::ConcreteQueue<Tout>*>(_outputQueues[qk])
-        ->pushLocked(resource);
+        for(int i=0; i<_outputQueues[qk].size(); i++)
+            static_cast<PipelineCpp::ConcreteQueue<Tout>*>(_outputQueues[qk][i])
+            ->pushLocked(resource);
 
     }
     
@@ -320,7 +322,7 @@ class ProcessingUnit{
     std::string _name;
     std::vector<Queue*> _inputQueues;
     std::vector<std::string> _inputTypes;
-    std::vector<Queue*> _outputQueues;
+    std::vector< std::vector<Queue*> > _outputQueues;
     std::vector<std::string> _outputTypes;
     std::mutex _workingmutex;
 
@@ -354,9 +356,10 @@ class Pipeline{
 
     public:
 
-    Pipeline(unsigned int nbWorkers = 1): _nbWorkers(nbWorkers)
+    Pipeline(unsigned int nbWorkers = 1): _nbWorkers(nbWorkers), _inCount(0), _outCount(0)
     {
-        _inputQueue = new ConcreteQueue<Tin>();
+
+        _inputQueues = std::vector< ConcreteQueue<Tin>* >();
 	_outputQueue = new ConcreteQueue<Tout>();
 
 	for(int i=0; i<_nbWorkers; i++)
@@ -396,16 +399,18 @@ class Pipeline{
 	
         _queues.push_back(cqueue);
 
-        _processingUnits[tk2]->inQueue<T>(cqueue);
-        _processingUnits[tk1]->outQueue<T>(cqueue);
+        _processingUnits[tk2]->inQueue<T>(cqueue, in);
+        _processingUnits[tk1]->outQueue<T>(cqueue, out);
 
     }
 
-    void plugInput(PToken tk)
+    void plugInput(PToken tk, Qid in)
     {
         if(_processingUnits[tk]->outType(0) == typeid(Tin).name())
-            _processingUnits[tk]->inQueue<Tin>(_inputQueue);
-        else throw PipelineException("Non matching queue types.");
+	{
+	    _inputQueues.push_back(new ConcreteQueue<Tin>);
+	    _processingUnits[tk]->inQueue<Tin>(_inputQueues.back(), in);
+        }else throw PipelineException("Non matching queue types.");
     }
 
     std::string inputType(){ return typeid(Tin).name(); }
@@ -413,7 +418,7 @@ class Pipeline{
     void plugOutput(PToken tk)
     {
         if(_processingUnits[tk]->inType(0) == typeid(Tout).name())
-            _processingUnits[tk]->outQueue<Tout>(_outputQueue);
+	    _processingUnits[tk]->outQueue<Tout>(_outputQueue, 0);
         else throw PipelineException("Non matching queue types.");
     }
 
@@ -421,12 +426,16 @@ class Pipeline{
     
     void push(Tin resource)
     {
-        _inputQueue->push(resource);
+        for(int i=0; i<_inputQueues.size(); i++)
+            _inputQueues[i]->push(resource);
+	std::cout << "pushed" << std::endl;
+	_inCount++;
     }
 
     Tout pop()
     {
         return _outputQueue->pop();
+	_outCount++;
     }
 
     Tout feed(Tin resource)
@@ -452,11 +461,14 @@ class Pipeline{
     protected:
 
     unsigned int _nbWorkers;
-    ConcreteQueue<Tin>* _inputQueue;
+    std::vector<ConcreteQueue<Tin>*> _inputQueues;
     ConcreteQueue<Tout>* _outputQueue;
     std::vector< ProcessingWorker > _workers;
     std::vector<ProcessingUnit*> _processingUnits;
     std::vector<Queue*> _queues;
+
+    unsigned int _inCount;
+    unsigned int _outCount;
 
 };
 

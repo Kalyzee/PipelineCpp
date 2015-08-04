@@ -14,7 +14,7 @@ void ProcessingWorker::processUnits()
 	        {
 	            if(_processingUnits[i]->tryLockQueues())
 		        {
-	            _processingUnits[i]->execute();
+	                    _processingUnits[i]->execute();
 		        }
 		        _processingUnits[i]->unlock();
 	        } 
@@ -28,7 +28,9 @@ bool ProcessingUnit::tryLockQueues()
     
     bool all_locked = true;
     std::vector<bool> inLocked(_inputQueues.size(), false);
-    std::vector<bool> outLocked(_outputQueues.size(), false);
+    std::vector< std::vector<bool> > outLocked(_outputQueues.size());
+    for(int i=0; i<_outputQueues.size(); i++)
+        outLocked[i].push_back(false);
 
     /* Try to lock input queues for poping and output queues for pushing. */
 
@@ -39,9 +41,10 @@ bool ProcessingUnit::tryLockQueues()
     }
     
     for(int i=0; i<_outputQueues.size(); i++)
+    for(int j=0; j<_outputQueues[i].size(); j++)
     {
-        outLocked[i] = _outputQueues[i]->tryLockPush();
-	if(!outLocked[i]) all_locked = false;
+        outLocked[i][j] = _outputQueues[i][j]->tryLockPush();
+	if(!outLocked[i][j]) all_locked = false;
     }
 
     if(!all_locked) // If some queues are not locked, it failed.
@@ -55,8 +58,9 @@ bool ProcessingUnit::tryLockQueues()
 	}
     
 	for(int i=0; i<_outputQueues.size(); i++)
+	for(int j=0; j<_outputQueues[i].size(); j++)
 	{
-	    if(outLocked[i]) _outputQueues[i]->unlockPush();
+	    if(outLocked[i][j]) _outputQueues[i][j]->unlockPush();
 	}
 
 	return false;
@@ -66,6 +70,28 @@ bool ProcessingUnit::tryLockQueues()
         return true;
 
     }
+
+}
+bool ProcessingUnit::checkInputs(){
+
+    if(_inputTypes.size() != _inputQueues.size()) return false;
+
+    for(int i=0; i<_inputQueues.size(); i++)
+        if(_inputQueues[i] == NULL) return false;
+
+    return true;
+
+}
+    
+bool ProcessingUnit::checkOutputs(){
+
+    if(_outputTypes.size() != _outputQueues.size()) return false;
+
+    for(int i=0; i<_outputQueues.size(); i++)
+        for(int j=0; j<_outputQueues[i].size(); j++)
+            if(_outputQueues[i][j] == NULL) return false;
+
+    return true;
 
 }
 
