@@ -1,23 +1,7 @@
 #include <iostream>
 #include <PipelineCpp.hpp>
-
-class DummyBase{
-
-    public:
-    DummyBase(){}
-    ~DummyBase(){}
-
-};
-
-class DummyDerived: public DummyBase{
-
-    public:
-    DummyDerived(){}
-    ~DummyDerived(){}
-
-    virtual void execute(){}
-
-};
+#include <chrono>
+#include <thread>
 
 class Addition: public PipelineCpp::ProcessingUnit{
 
@@ -36,6 +20,8 @@ class Addition: public PipelineCpp::ProcessingUnit{
 
         float op0 = popIn<float>(0);
         float op1 = popIn<float>(1);
+
+        std::this_thread::sleep_for(std::chrono::seconds(1));
 
         pushOut<float>(0, op0+op1);
 
@@ -61,6 +47,8 @@ class Subtraction: public PipelineCpp::ProcessingUnit{
       float op0 = popIn<float>(0);
       float op1 = popIn<float>(1);
 
+      std::this_thread::sleep_for(std::chrono::seconds(2));
+
       pushOut<float>(0, op0-op1);
 
     }
@@ -84,6 +72,8 @@ class Mutliplication: public PipelineCpp::ProcessingUnit{
 
       float op0 = popIn<float>(0);
       float op1 = popIn<float>(1);
+
+      std::this_thread::sleep_for(std::chrono::seconds(3));
 
       pushOut<float>(0, op0*op1);
 
@@ -109,31 +99,9 @@ class Division: public PipelineCpp::ProcessingUnit{
       float op0 = popIn<float>(0);
       float op1 = popIn<float>(1);
 
+      std::this_thread::sleep_for(std::chrono::seconds(4));
+
       pushOut<float>(0, op0/op1);
-
-    }
-
-};
-
-class Duplication: public PipelineCpp::ProcessingUnit{
-
-    public:
-    Duplication():PipelineCpp::ProcessingUnit("Duplication")
-    {
-        addInType<float>();
-        addOutType<float>();
-        addOutType<float>();
-    }
-    ~Duplication(){}
-
-    virtual void execute(){
-
-      std::cout << _name << std::endl;
-
-      float op0 = popIn<float>(0);
-
-      pushOut<float>(0, op0);
-      pushOut<float>(1, op0);
 
     }
 
@@ -185,9 +153,9 @@ int main(int argc, char* argv[])
     }catch(PipelineCpp::PipelineException e){std::cout << e.what() << std::endl;}
 
     std::cout << "pipeline_built" << std::endl;
-	
-    std::cout << pipeline.feed(10) << std::endl;
-    std::cout << pipeline.feed(100) << std::endl;
+    
+    for(int i=0; i<10000; i++)
+        std::cout << pipeline.feed(i) << std::endl;
 
     return 0;
 

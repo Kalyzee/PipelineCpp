@@ -405,7 +405,7 @@ class Pipeline{
 
   void plugInput(PToken tk, Qid in = 0)
     {
-        if(_processingUnits[tk]->outType(0) == typeid(Tin).name())
+        if(_processingUnits[tk]->inType(in) == typeid(Tin).name())
 	{
 	    _inputQueues.push_back(new ConcreteQueue<Tin>);
 	    _processingUnits[tk]->inQueue<Tin>(_inputQueues.back(), in);
@@ -416,7 +416,7 @@ class Pipeline{
     
     void plugOutput(PToken tk, Qid out = 0)
     {
-        if(_processingUnits[tk]->inType(0) == typeid(Tout).name())
+        if(_processingUnits[tk]->outType(out) == typeid(Tout).name())
 	    _processingUnits[tk]->outQueue<Tout>(_outputQueue, out);
         else throw PipelineException("Non matching queue types.");
     }
